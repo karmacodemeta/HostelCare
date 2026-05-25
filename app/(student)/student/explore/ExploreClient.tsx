@@ -14,6 +14,7 @@ import {
 import { getExploreProperties, submitKYCDocumentation, signLeaseAgreementDocument } from '@/app/actions/explore';
 import { addStudent } from '@/app/actions/student';
 import { toast } from 'sonner';
+import { useTheme } from 'next-themes';
 
 const BUILDING_IMAGE = 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=800&q=80';
 const ROOM_IMAGE = 'https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=800&q=80';
@@ -25,6 +26,7 @@ interface ExploreClientProps {
 }
 
 export default function ExploreClient({ initialProperties, loggedStudent }: ExploreClientProps) {
+  const { resolvedTheme } = useTheme();
   const [properties, setProperties] = useState<any[]>(initialProperties);
   const [selectedProperty, setSelectedProperty] = useState<any | null>(null);
   
@@ -130,8 +132,13 @@ export default function ExploreClient({ initialProperties, loggedStudent }: Expl
 
     mapRef.current = map;
 
-    // Premium dark mode map tiles from CartoDB
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    // Premium theme-responsive map tiles from CartoDB (Positron in Light Mode, Dark Matter in Dark Mode)
+    const isDark = resolvedTheme === 'dark';
+    const tileUrl = isDark 
+      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+      : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+
+    L.tileLayer(tileUrl, {
       attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
       maxZoom: 18
     }).addTo(map);
@@ -145,27 +152,29 @@ export default function ExploreClient({ initialProperties, loggedStudent }: Expl
       if (prop.propertyType === 'pg_girls') markerColor = '#ec4899'; // Girls
 
       const isFocused = focusedBranchId === prop._id;
+      const pinBgColor = isFocused ? '#4f46e5' : (isDark ? '#09090b' : '#ffffff');
+      const pinTextColor = isDark ? '#ffffff' : '#09090b';
 
       // Render glowing HTML marker pin matching standard UI startingPrice
       const icon = L.divIcon({
         className: 'custom-leaflet-pin-wrapper',
         html: `
           <div style="
-            background-color: ${isFocused ? '#4f46e5' : '#09090b'};
-            color: #ffffff;
+            background-color: ${pinBgColor};
+            color: ${pinTextColor};
             padding: 5px 11px;
             border-radius: 9999px;
             font-size: 10px;
             font-weight: 800;
             border: 2px solid ${markerColor};
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, ${isDark ? '0.4' : '0.15'});
             white-space: nowrap;
             display: flex;
             align-items: center;
             gap: 5px;
             transform: translate(-50%, -100%);
             transition: all 0.2s ease-in-out;
-            ${isFocused ? 'transform: translate(-50%, -100%) scale(1.08); font-size: 10.5px; border-color: #ffffff;' : ''}
+            ${isFocused ? 'transform: translate(-50%, -100%) scale(1.08); font-size: 10.5px; border-color: ' + (isDark ? '#ffffff' : '#09090b') + ';' : ''}
           ">
             <span style="width: 7px; height: 7px; background-color: ${markerColor}; border-radius: 50%; display: inline-block;"></span>
             <span>₹${(prop.startingPrice / 1000).toFixed(1)}k</span>
@@ -221,7 +230,7 @@ export default function ExploreClient({ initialProperties, loggedStudent }: Expl
       map.remove();
       mapRef.current = null;
     };
-  }, [leafletLoaded, properties, city]);
+  }, [leafletLoaded, properties, city, resolvedTheme]);
 
   // Fly/pan map to focused card's coordinates dynamically
   useEffect(() => {
@@ -590,25 +599,25 @@ export default function ExploreClient({ initialProperties, loggedStudent }: Expl
 
         {/* Dynamic Simulated Price Pin Map (Right 2 cols) */}
         <div className="lg:col-span-2">
-          <Card className="p-4 bg-zinc-950 text-white border-zinc-800 shadow-xl h-[480px] flex flex-col justify-between relative overflow-hidden rounded-2xl">
-            {/* Dark grid canvas backdrop simulating digital premium PG maps */}
-            <div className="absolute inset-0 opacity-10 bg-[linear-gradient(to_right,#808080_1px,transparent_1px),linear-gradient(to_bottom,#808080_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
-            <div className="absolute inset-0 opacity-20 bg-gradient-to-tr from-indigo-950 via-zinc-950 to-transparent pointer-events-none" />
+          <Card className="p-4 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white border-zinc-200 dark:border-zinc-800 shadow-xl h-[480px] flex flex-col justify-between relative overflow-hidden rounded-2xl">
+            {/* Grid canvas backdrop simulating digital premium PG maps */}
+            <div className="absolute inset-0 opacity-5 dark:opacity-10 bg-[linear-gradient(to_right,#808080_1px,transparent_1px),linear-gradient(to_bottom,#808080_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
+            <div className="absolute inset-0 opacity-10 dark:opacity-20 bg-gradient-to-tr from-indigo-50 dark:from-indigo-950 via-white dark:via-zinc-950 to-transparent pointer-events-none" />
 
-            <div className="relative flex items-center justify-between border-b border-zinc-800 pb-2.5">
+            <div className="relative flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-2.5">
               <div className="flex items-center gap-2">
-                <Map className="w-4 h-4 text-indigo-400 animate-pulse" />
-                <span className="text-xs font-bold uppercase tracking-widest text-zinc-400">PG Price Pin Map Explorer</span>
+                <Map className="w-4 h-4 text-indigo-600 dark:text-indigo-400 animate-pulse" />
+                <span className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">PG Price Pin Map Explorer</span>
               </div>
-              <span className="text-[9px] bg-zinc-800 px-2 py-0.5 rounded font-bold text-indigo-400">Simulated GPS Live</span>
+              <span className="text-[9px] bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded font-bold text-indigo-600 dark:text-indigo-400">Simulated GPS Live</span>
             </div>
 
             {/* Map Plot Space */}
-            <div className="flex-1 w-full h-full relative rounded-xl overflow-hidden mt-2 z-10 border border-zinc-800">
+            <div className="flex-1 w-full h-full relative rounded-xl overflow-hidden mt-2 z-10 border border-zinc-200 dark:border-zinc-800">
               <div id="leaflet-map" className="w-full h-full" />
               
-              <div className="text-center absolute bottom-4 left-4 right-4 z-20 text-[10px] text-zinc-300 bg-zinc-950/90 backdrop-blur p-2 rounded-lg border border-zinc-800 flex items-center gap-1.5 justify-center pointer-events-none">
-                <Info className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+              <div className="text-center absolute bottom-4 left-4 right-4 z-20 text-[10px] text-zinc-700 dark:text-zinc-300 bg-white/90 dark:bg-zinc-950/90 backdrop-blur p-2 rounded-lg border border-zinc-200 dark:border-zinc-800 flex items-center gap-1.5 justify-center pointer-events-none shadow-sm">
+                <Info className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
                 <span>Real-time GPS PG Locator: pins show starting monthly rent. Click card/pin to pan map!</span>
               </div>
             </div>
