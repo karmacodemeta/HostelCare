@@ -70,6 +70,171 @@ export default function ExploreClient({ initialProperties, loggedStudent }: Expl
   // Focus map marker
   const [focusedBranchId, setFocusedBranchId] = useState<string | null>(null);
 
+  const [leafletLoaded, setLeafletLoaded] = useState(false);
+  const mapRef = React.useRef<any>(null);
+
+  // Dynamic Leaflet Loader from CDN
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // Avoid duplicate stylesheet injection
+    const link = document.querySelector('link[href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"]') as HTMLLinkElement | null;
+    if (!link) {
+      const newLink = document.createElement('link');
+      newLink.rel = 'stylesheet';
+      newLink.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      document.head.appendChild(newLink);
+    }
+
+    // Avoid duplicate script injection
+    const script = document.querySelector('script[src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"]') as HTMLScriptElement | null;
+    if (!script) {
+      const newScript = document.createElement('script');
+      newScript.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      newScript.async = true;
+      newScript.onload = () => {
+        setLeafletLoaded(true);
+      };
+      document.body.appendChild(newScript);
+    } else {
+      setLeafletLoaded(true);
+    }
+  }, []);
+
+  // Map initialization & synchronization
+  useEffect(() => {
+    if (!leafletLoaded || typeof window === 'undefined' || !(window as any).L) return;
+    const L = (window as any).L;
+
+    const mapContainer = document.getElementById('leaflet-map');
+    if (!mapContainer) return;
+
+    // Clear old instance to avoid re-init error
+    if ((mapContainer as any)._leaflet_id) {
+      return;
+    }
+
+    // Determine map center based on city or default Noida coordinates
+    let initialCenter: [number, number] = [28.6297, 77.3721]; // Noida Sector 62
+    if (city === 'Patna') {
+      initialCenter = [25.6186, 85.1163]; // Patna Boring Road
+    } else if (properties.length > 0) {
+      const activeProp = properties.find(p => p.city.toLowerCase() === city.toLowerCase()) || properties[0];
+      initialCenter = [activeProp.latitude || 28.6297, activeProp.longitude || 77.3721];
+    }
+
+    const map = L.map('leaflet-map', {
+      zoomControl: true,
+      scrollWheelZoom: true,
+    }).setView(initialCenter, city === 'Patna' ? 12 : 12);
+
+    mapRef.current = map;
+
+    // Premium dark mode map tiles from CartoDB
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+      maxZoom: 18
+    }).addTo(map);
+
+    // Plot beautiful color-coded price pin markers
+    properties.forEach((prop) => {
+      if (!prop.latitude || !prop.longitude) return;
+
+      let markerColor = '#6366f1'; // Unisex/Co-Living
+      if (prop.propertyType === 'pg_boys') markerColor = '#3b82f6'; // Boys
+      if (prop.propertyType === 'pg_girls') markerColor = '#ec4899'; // Girls
+
+      const isFocused = focusedBranchId === prop._id;
+
+      // Render glowing HTML marker pin matching standard UI startingPrice
+      const icon = L.divIcon({
+        className: 'custom-leaflet-pin-wrapper',
+        html: `
+          <div style="
+            background-color: ${isFocused ? '#4f46e5' : '#09090b'};
+            color: #ffffff;
+            padding: 5px 11px;
+            border-radius: 9999px;
+            font-size: 10px;
+            font-weight: 800;
+            border: 2px solid ${markerColor};
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transform: translate(-50%, -100%);
+            transition: all 0.2s ease-in-out;
+            ${isFocused ? 'transform: translate(-50%, -100%) scale(1.08); font-size: 10.5px; border-color: #ffffff;' : ''}
+          ">
+            <span style="width: 7px; height: 7px; background-color: ${markerColor}; border-radius: 50%; display: inline-block;"></span>
+            <span>₹${(prop.startingPrice / 1000).toFixed(1)}k</span>
+          </div>
+        `,
+        iconSize: [60, 24],
+        iconAnchor: [30, 24],
+      });
+
+      const marker = L.marker([prop.latitude, prop.longitude], { icon }).addTo(map);
+
+      // Add descriptive popup containing name, region, and vacancy count
+      marker.bindPopup(`
+        <div style="color: #09090b; font-family: system-ui, -apple-system, sans-serif; padding: 6px; width: 175px;">
+          <span style="
+            display: inline-block;
+            font-size: 8px;
+            text-transform: uppercase;
+            font-weight: 800;
+            padding: 1px 5px;
+            border-radius: 3px;
+            margin-bottom: 5px;
+            background-color: ${markerColor}20;
+            color: ${markerColor};
+            border: 1px solid ${markerColor}40;
+          ">
+            ${prop.propertyType === 'pg_boys' ? 'Boys PG' : prop.propertyType === 'pg_girls' ? 'Girls PG' : 'Co-Living'}
+          </span>
+          <h4 style="margin: 0 0 3px 0; font-weight: 800; font-size: 12px; line-height: 1.2;">${prop.name}</h4>
+          <p style="margin: 0 0 8px 0; font-size: 9px; color: #71717a;">📍 ${prop.area}, ${prop.city}</p>
+          <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #f4f4f5; padding-top: 5px;">
+            <span style="font-weight: 800; font-size: 11px; color: #4f46e5;">₹${prop.startingPrice.toLocaleString()} <span style="font-size: 8px; font-weight: 500; color: #71717a;">/mo</span></span>
+            <span style="font-size: 8px; font-weight: 700; color: #15803d; background: #dcfce7; padding: 2px 5px; border-radius: 3px;">
+              ${prop.capacity - prop.occupiedBeds} Beds Left
+            </span>
+          </div>
+        </div>
+      `, {
+        closeButton: false,
+        offset: L.point(0, -10)
+      });
+
+      marker.on('click', () => {
+        setFocusedBranchId(prop._id);
+        map.setView([prop.latitude, prop.longitude], 13, {
+          animate: true,
+          duration: 0.8
+        });
+      });
+    });
+
+    return () => {
+      map.remove();
+      mapRef.current = null;
+    };
+  }, [leafletLoaded, properties, city]);
+
+  // Fly/pan map to focused card's coordinates dynamically
+  useEffect(() => {
+    if (!leafletLoaded || !focusedBranchId || !mapRef.current) return;
+    const prop = properties.find(p => p._id === focusedBranchId);
+    if (prop && prop.latitude && prop.longitude) {
+      mapRef.current.setView([prop.latitude, prop.longitude], 13, {
+        animate: true,
+        duration: 0.8
+      });
+    }
+  }, [focusedBranchId, properties, leafletLoaded]);
+
   const amenitiesOptions = [
     'High-Speed WiFi', 'AC Rooms', 'Power Backup', 
     'CCTV Security', 'Daily Cleaning', 'Organic Mess Food',
@@ -439,52 +604,13 @@ export default function ExploreClient({ initialProperties, loggedStudent }: Expl
             </div>
 
             {/* Map Plot Space */}
-            <div className="flex-1 w-full h-full relative flex items-center justify-center">
-              {/* Patna / Noida Map Base Outline graphics */}
-              <div className="absolute border border-zinc-800/40 rounded-full w-80 h-80 flex items-center justify-center opacity-30 animate-pulse" />
-              <div className="absolute border border-zinc-800/40 rounded-full w-48 h-48 flex items-center justify-center opacity-30" />
+            <div className="flex-1 w-full h-full relative rounded-xl overflow-hidden mt-2 z-10 border border-zinc-800">
+              <div id="leaflet-map" className="w-full h-full" />
               
-              <div className="text-center absolute bottom-4 left-0 right-0 z-10 text-[10px] text-zinc-500 bg-black/80 p-2 mx-12 rounded-lg border border-zinc-800 flex items-center gap-1.5 justify-center">
-                <Info className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
-                <span>Pins display starting monthly room rent. Click to focus PG!</span>
+              <div className="text-center absolute bottom-4 left-4 right-4 z-20 text-[10px] text-zinc-300 bg-zinc-950/90 backdrop-blur p-2 rounded-lg border border-zinc-800 flex items-center gap-1.5 justify-center pointer-events-none">
+                <Info className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                <span>Real-time GPS PG Locator: pins show starting monthly rent. Click card/pin to pan map!</span>
               </div>
-
-              {/* Pulsing glow markers for PGs */}
-              {properties.map((prop, idx) => {
-                const isFocused = focusedBranchId === prop._id;
-                // Shift coordinates inside local box
-                const topPct = 30 + (idx * 22) % 45;
-                const leftPct = 25 + (idx * 33) % 55;
-
-                return (
-                  <button
-                    key={prop._id}
-                    onClick={() => {
-                      setFocusedBranchId(prop._id);
-                      toast(`Focused Property: ${prop.name}`);
-                    }}
-                    style={{ top: `${topPct}%`, left: `${leftPct}%` }}
-                    className={`absolute p-2 flex flex-col items-center justify-center group cursor-pointer transition-all duration-300 z-20 ${
-                      isFocused ? 'scale-110' : 'hover:scale-105'
-                    }`}
-                  >
-                    {/* Glowing pin badge */}
-                    <div className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold tracking-tight border shadow-lg flex items-center gap-1 transition-all ${
-                      isFocused 
-                        ? 'bg-indigo-600 text-white border-indigo-400 shadow-indigo-500/20' 
-                        : 'bg-zinc-900/90 text-zinc-200 border-zinc-700 hover:border-indigo-500'
-                    }`}>
-                      <MapPin className="w-3.5 h-3.5" />
-                      <span>₹{(prop.startingPrice / 1000).toFixed(1)}k</span>
-                    </div>
-
-                    {/* Small pulsing ring beneath pin */}
-                    {isFocused && (
-                      <span className="absolute bottom-0 w-2 h-2 bg-indigo-400 rounded-full animate-ping" />
-                    )}
-                  </button>
-                );
-              })}
             </div>
           </Card>
         </div>
