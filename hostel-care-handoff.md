@@ -79,7 +79,7 @@ The repository details for code tracking.
 
 | Component / Repo Name | Local Path | Git Remote URL | Current Commit / Branch |
 | :--- | :--- | :--- | :--- |
-| `HostelCare` | `C:\Users\LENOVO\Documents\GitHub\master\client-websites\HostelCare` | `https://github.com/H3MRAJ/KarmaCode.git` | `main` |
+| `HostelCare` | `C:\Users\LENOVO\Documents\GitHub\master\client-websites\HostelCare` | `https://github.com/karmacodemeta/HostelCare.git` | `main` |
 
 ---
 
@@ -149,6 +149,18 @@ Rules that MUST be adhered to by any developing agent:
   - Safe-guarded `addExpense` inside `expense.ts` from Mongoose `CastError: Cast to ObjectId failed` when branch selections are left as Default/All Branches by mapping empty values as `undefined`.
   - Populated MongoDB with **34 payment receipts** (₹103,800 Total Revenue), **4 operational expenses** (₹25,500 Total Expenses), and **8 high-fidelity activity logs** to replace the old blank states and "Imported 0 students" logs.
 - **Decisions/Outcomes:** Premium, high-contrast, fully visual spotlighting, click hand guide, resilient browser uploader, clear dues checker responses, casting safety guards, and fully populated financial metrics are active. Compilation is successful. Seeding is complete.
+
+### 4.7 Phase 3: Booking Marketplace, Compliance, and Git Submodule (2026-05-25)
+- **Goal:** Transform HostelCare into an elite SaaS booking marketplace by implementing KYC compliance, digitally signed leases, online simulated payment gates, visitor logs, leave pass management, advanced branch comparisons, visual mapping, public page header/footers, and setting up Git submodule structures.
+- **Actions Taken:**
+  - **KYC Compliance:** Implemented full student Aadhaar and PAN uploading in bookings and built `/kyc` approvals workflow for Wardens. Integrated visual profile KYC identity validation cards inline inside the student details view (`StudentProfileClient.tsx`).
+  - **Digitally Signed Leases:** Added legally protective license agreements with late dues Compounded surcharges, damage recovery terms, and clear platform liability waivers in scroll boxes, digitally signed by residents and inspectable/downloadable by Wardens.
+  - **Online Payment Overlays:** Embedded simulated UPI/Card/Netbanking Razorpay dialog gateways in the student dashboard, dynamically clearing rent dues to zero.
+  - **Leaves & Visitor Logs:** Created full gatepass calendar application tabs in student portals, check-out reviews in Warden dashboard (`/leaves`), and gate log entries under student profiles (`VisitorLog`).
+  - **Advanced Analytics & Branch Comparison:** Plotted Recharts area trends for occupancy and mapped side-by-side Branch stats comparison panels (revenue, expenses, occupied beds).
+  - **Public Landing Redesign:** Overhauled the public root page (`app/page.tsx`) with a premium glassmorphic landing deck featuring clean headers, footers with links in inviting human-readable language, and beautifully styled "Developed & Powered by Karma Code" copyright trademark branding.
+  - **Git Submodule & Repository Setup:** Initialized a local Git repository in `client-websites/HostelCare`, committed all modifications, created a new remote repository `karmacodemeta/HostelCare` on GitHub, and registered it as a submodule in `client-websites` repo. Pushed all commit layers successfully to GitHub.
+- **Decisions/Outcomes:** App successfully runs dev server in the background and Next.js production builds compile with zero errors or warnings. Handoff context verified.
 
 ---
 
